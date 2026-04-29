@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat WebSocket</title>
+    <style>
+        body { font-family: Arial; max-width: 550px; margin: 30px auto; }
+        #messages { border: 1px solid #ddd; height: 250px; overflow-y: auto; padding: 10px; margin-bottom: 10px; }
+        .input-area { display: flex; gap: 8px; }
+        #messageInput { flex: 1; padding: 8px; }
+        button { padding: 8px 16px; }
+        .nama-area { margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <h2>Chat WebSocket</h2>
+    <div class="nama-area">
+        <label>Nama Anda: </label>
+        <input type="text" id="namaInput" placeholder="Nama">
+        <button id="gantiNama">Ganti Nama</button>
+        <span style="margin-left: 10px;">Nama saat ini: <strong id="namaSekarang">Razan</strong></span>
+    </div>
+    <div id="messages"></div>
+    <div class="input-area">
+        <input type="text" id="messageInput" placeholder="Ketik pesan...">
+        <button id="sendBtn">Kirim</button>
+    </div>
+
+    <script>
+        let namaSaya = "Razan";
+        document.getElementById('namaSekarang').innerText = namaSaya;
+        document.getElementById('namaInput').value = namaSaya;
+
+        function addMessage(sender, text, isSelf = false) {
+            const div = document.createElement('div');
+            if (isSelf) div.style.color = 'blue';
+            div.innerHTML = `<strong>${sender}:</strong> ${text}`;
+            document.getElementById('messages').appendChild(div);
+            div.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }
+
+        function addSystemMsg(text) {
+            const div = document.createElement('div');
+            div.style.fontStyle = 'italic';
+            div.style.color = 'gray';
+            div.innerHTML = `🔔 ${text}`;
+            document.getElementById('messages').appendChild(div);
+            div.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }
+
+        const ws = new WebSocket('ws://localhost:8080');
+        ws.onopen = () => addSystemMsg('Terhubung ke server');
+        ws.onmessage = (e) => {
+            const data = JSON.parse(e.data);
+            if (data.nama === namaSaya) return;
+            addMessage(data.nama, data.pesan);
+        };
+        ws.onclose = () => addSystemMsg('Koneksi putus');
+
+        function kirim() {
+            let msg = document.getElementById('messageInput').value.trim();
+            if (msg === '') return;
+            const data = { nama: namaSaya, pesan: msg };
+            ws.send(JSON.stringify(data));
+            addMessage(namaSaya, msg, true);
+            document.getElementById('messageInput').value = '';
+        }
+
+        document.getElementById('sendBtn').onclick = kirim;
+        document.getElementById('messageInput').addEventListener('keypress', e => e.key === 'Enter' && kirim());
+        document.getElementById('gantiNama').onclick = () => {
+            let baru = document.getElementById('namaInput').value.trim();
+            if (baru) {
+                namaSaya = baru;
+                document.getElementById('namaSekarang').innerText = namaSaya;
+            }
+        };
+    </script>
+</body>
+</html>
